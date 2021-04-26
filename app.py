@@ -221,6 +221,45 @@ def get_students_oldy():
     else:
         return Response("Wrong uuid.",status=401,mimetype='application/json')
 
+# ΕΡΩΤΗΜΑ 6: Επιστροφή φοιτητή που έχει δηλώσει κατοικία βάσει email 
+@app.route('/getStudentAddress', methods=['GET'])
+def get_student_address():
+    """
+        Στα headers του request ο χρήστης θα πρέπει να περνάει και το uuid το οποίο έχει λάβει κατά την είσοδό του στο σύστημα. 
+            Π.Χ: uuid = request.headers.get['authorization']
+        Για τον έλεγχο του uuid να καλεστεί η συνάρτηση is_session_valid() (!!! Η ΣΥΝΑΡΤΗΣΗ is_session_valid() ΕΙΝΑΙ ΗΔΗ ΥΛΟΠΟΙΗΜΕΝΗ) με παράμετρο το uuid. 
+            * Αν η συνάρτηση επιστρέψει False ο χρήστης δεν έχει αυθεντικοποιηθεί. Σε αυτή τη περίπτωση να επιστρέφεται ανάλογο μήνυμα με response code 401. 
+            * Αν η συνάρτηση επιστρέψει True, ο χρήστης έχει αυθεντικοποιηθεί. 
+
+        Το συγκεκριμένο endpoint θα δέχεται σαν argument το email του φοιτητή. 
+        * Στη περίπτωση που ο φοιτητής έχει δηλωμένη τη κατοικία του, θα πρέπει να επιστρέφεται το όνομα του φοιτητή η διεύθυνσή του(street) και ο Ταχυδρομικός Κωδικός (postcode) της διεύθυνσης αυτής.
+        * Στη περίπτωη που είτε ο φοιτητής δεν έχει δηλωμένη κατοικία, είτε δεν υπάρχει φοιτητής με αυτό το email στο σύστημα, να επιστρέφεται μήνυμα λάθους. 
+        
+        Αν υπάρχει όντως ο φοιτητής με δηλωμένη κατοικία, να περάσετε τα δεδομένα του σε ένα dictionary που θα ονομάζεται student.
+        Το student{} να είναι της μορφής: 
+        student = {"name": "Student's name", "street": "The street where the student lives", "postcode": 11111}
+    """
+
+    uuid = request.headers.get('authorization')
+
+    if is_session_valid(uuid) :
+        
+        email = request.args.get('email')
+
+        if email == None:
+            return Response("Bad request", status=500, mimetype='application/json')
+        student = students.find_one({"email":email})
+        if student !=None:
+            if students.count_documents({"$and": [{"email":email}, {"address": {'$exists': True}}]}) == 1 :
+                student = {'name':student["name"],'street':student["address"][0]["street"],'postcode':student["address"][0]["postcode"]}
+                return Response(json.dumps(student), status=200, mimetype='application/json')
+            else :
+                return Response('There is a student with that email but no address found',status=500,mimetype='application/json')
+
+        return Response('No student found with that email',status=500,mimetype='application/json')
+    else:
+        return Response("Wrong uuid.",status=401,mimetype='application/json')
+
 
 # Εκτέλεση flask service σε debug mode, στην port 5000. 
 if __name__ == '__main__':
