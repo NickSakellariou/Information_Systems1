@@ -299,6 +299,60 @@ def delete_student():
         return Response("Wrong uuid.",status=401,mimetype='application/json')
 
 
+# ΕΡΩΤΗΜΑ 8: Εισαγωγή μαθημάτων σε φοιτητή βάσει email 
+@app.route('/addCourses', methods=['PATCH'])
+def add_courses():
+    # Request JSON data
+    data = None 
+    try:
+        data = json.loads(request.data)
+    except Exception as e:
+        return Response("bad json content",status=500,mimetype='application/json')
+    if data == None:
+        return Response("bad request",status=500,mimetype='application/json')
+    if not "email" in data or not "courses" in data:
+        return Response("Information incomplete",status=500,mimetype="application/json")
+
+    """
+        Στα headers του request ο χρήστης θα πρέπει να περνάει και το uuid το οποίο έχει λάβει κατά την είσοδό του στο σύστημα. 
+            Π.Χ: uuid = request.headers.get['authorization']
+        Για τον έλεγχο του uuid να καλεστεί η συνάρτηση is_session_valid() (!!! Η ΣΥΝΑΡΤΗΣΗ is_session_valid() ΕΙΝΑΙ ΗΔΗ ΥΛΟΠΟΙΗΜΕΝΗ) με παράμετρο το uuid. 
+            * Αν η συνάρτηση επιστρέψει False ο χρήστης δεν έχει αυθεντικοποιηθεί. Σε αυτή τη περίπτωση να επιστρέφεται ανάλογο μήνυμα με response code 401. 
+            * Αν η συνάρτηση επιστρέψει True, ο χρήστης έχει αυθεντικοποιηθεί. 
+
+        Το συγκεκριμένο endpoint θα δέχεται σαν argument το email του φοιτητή. Στο body του request θα πρέπει δίνεται ένα json της παρακάτω μορφής:
+        
+        {
+            "email": "an email",
+            "courses": [
+                {"course 1": 10}, 
+                {"course 2": 3 }, 
+                {"course 3": 8}
+            ]
+        } 
+        
+        Η λίστα courses έχει μία σειρά από dictionary για τα οποία τα key αντιστοιχούν σε τίτλο μαθημάτων και το value στο βαθμό που έχει λάβει ο φοιτητής σε αυτό το μάθημα.
+        * Στη περίπτωση που υπάρχει φοιτητής με αυτό το email, θα πρέπει να γίνει εισαγωγή των μαθημάτων και των βαθμών τους, σε ένα νέο key του document του φοιτητή που θα ονομάζεται courses. 
+        * Το νέο αυτό key θα πρέπει να είναι μία λίστα από dictionary.
+        * Αν δε βρεθεί φοιτητής με αυτό το email να επιστρέφεται μήνυμα λάθους. 
+    """
+
+    uuid = request.headers.get('authorization')
+
+    if is_session_valid(uuid) :
+
+        student = students.find_one({"email":data["email"]})
+        if student !=None:
+            msg = "Course was added to the student " + student['name']
+            students.update_one({'email': data["email"]}, {'$set': {"courses": data["courses"] }})
+            return Response(msg, status=200, mimetype='application/json')
+        else:
+            msg = "No student found with that email."
+            return Response(msg,status=500,mimetype='application/json')
+    else:
+        return Response("Wrong uuid.",status=401,mimetype='application/json')
+
+
 # Εκτέλεση flask service σε debug mode, στην port 5000. 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
