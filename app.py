@@ -182,6 +182,45 @@ def get_students_thirty():
     else:
         return Response("Wrong uuid.",status=401,mimetype='application/json')
 
+# ΕΡΩΤΗΜΑ 5: Επιστροφή όλων των φοιτητών που είναι τουλάχιστον 30 ετών
+@app.route('/getStudents/oldies', methods=['GET'])
+def get_students_oldy():
+    """
+        Στα headers του request ο χρήστης θα πρέπει να περνάει και το uuid το οποίο έχει λάβει κατά την είσοδό του στο σύστημα. 
+            Π.Χ: uuid = request.headers.get['authorization']
+        Για τον έλεγχο του uuid να καλεστεί η συνάρτηση is_session_valid() (!!! Η ΣΥΝΑΡΤΗΣΗ is_session_valid() ΕΙΝΑΙ ΗΔΗ ΥΛΟΠΟΙΗΜΕΝΗ) με παράμετρο το uuid. 
+            * Αν η συνάρτηση επιστρέψει False ο χρήστης δεν έχει αυθεντικοποιηθεί. Σε αυτή τη περίπτωση να επιστρέφεται ανάλογο μήνυμα με response code 401. 
+            * Αν η συνάρτηση επιστρέψει True, ο χρήστης έχει αυθεντικοποιηθεί. 
+        
+        Το συγκεκριμένο endpoint θα πρέπει να επιστρέφει τη λίστα των φοιτητών οι οποίοι είναι 30 ετών και άνω.
+        Να περάσετε τα δεδομένα των φοιτητών σε μία λίστα που θα ονομάζεται students.
+        
+        Σε περίπτωση που δε βρεθεί κάποιος φοιτητής, να επιστρέφεται ανάλογο μήνυμα και όχι κενή λίστα.
+    """
+
+    uuid = request.headers.get('authorization')
+
+    if is_session_valid(uuid) :
+        
+        query = {"yearOfBirth": {'$lt': 1991}}
+        iterable = students.find(query)
+
+        output = []
+        """
+        Δεν ονόμασα την λίστα students γιατί μου βγάζει αυτό το error :
+        UnboundLocalError: local variable 'students' referenced before assignment
+        """
+
+        for student in iterable:
+            student['_id'] = None 
+            output.append(student)
+
+        if output != []:
+            return Response(json.dumps(output), status=200, mimetype='application/json')
+        return Response('No student found thas is at least 30 years old',status=500,mimetype='application/json')
+    else:
+        return Response("Wrong uuid.",status=401,mimetype='application/json')
+
 
 # Εκτέλεση flask service σε debug mode, στην port 5000. 
 if __name__ == '__main__':
