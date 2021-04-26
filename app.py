@@ -124,9 +124,61 @@ def get_student():
             return Response("Bad request", status=500, mimetype='application/json')
         student = students.find_one({"email":email})
         if student !=None:
-            student = {'name':student["name"],'email':student["email"], 'yearOfBirth':student["yearOfBirth"], 'address':student["address"]}
-            return Response(json.dumps(student), status=200, mimetype='application/json')
+
+            if students.count_documents({"$and": [{"email":email}, {"address": {'$exists': False}}, {"gender": {'$exists': False}}]}) == 1 :
+                student = {'name':student["name"],'email':student["email"], 'yearOfBirth':student["yearOfBirth"]}
+                return Response(json.dumps(student), status=200, mimetype='application/json')
+            if students.count_documents({"$and": [{"email":email}, {"address": {'$exists': True}}, {"gender": {'$exists': False}}]}) == 1 :
+                student = {'name':student["name"],'email':student["email"], 'yearOfBirth':student["yearOfBirth"],'address':student["address"]}
+                return Response(json.dumps(student), status=200, mimetype='application/json')
+            if students.count_documents({"$and": [{"email":email}, {"address": {'$exists': False}}, {"gender": {'$exists': True}}]}) == 1 :
+                student = {'name':student["name"],'email':student["email"], 'yearOfBirth':student["yearOfBirth"],'gender':student["gender"]}
+                return Response(json.dumps(student), status=200, mimetype='application/json')
+            if students.count_documents({"$and": [{"email":email}, {"address": {'$exists': True}}, {"gender": {'$exists': True}}]}) == 1 :
+                student = {'name':student["name"],'email':student["email"], 'yearOfBirth':student["yearOfBirth"],'address':student["address"],'gender':student["gender"]}
+                return Response(json.dumps(student), status=200, mimetype='application/json')
+
         return Response('No student found with that email',status=500,mimetype='application/json')
+    else:
+        return Response("Wrong uuid.",status=401,mimetype='application/json')
+
+
+# ΕΡΩΤΗΜΑ 4: Επιστροφή όλων των φοιτητών που είναι 30 ετών
+@app.route('/getStudents/thirties', methods=['GET'])
+def get_students_thirty():
+    """
+        Στα headers του request ο χρήστης θα πρέπει να περνάει το uuid το οποίο έχει λάβει κατά την είσοδό του στο σύστημα. 
+            Π.Χ: uuid = request.headers.get['authorization']
+        Για τον έλεγχο του uuid να καλεστεί η συνάρτηση is_session_valid() (!!! Η ΣΥΝΑΡΤΗΣΗ is_session_valid() ΕΙΝΑΙ ΗΔΗ ΥΛΟΠΟΙΗΜΕΝΗ) με παράμετρο το uuid. 
+            * Αν η συνάρτηση επιστρέψει False ο χρήστης δεν έχει αυθεντικοποιηθεί. Σε αυτή τη περίπτωση να επιστρέφεται ανάλογο μήνυμα με response code 401. 
+            * Αν η συνάρτηση επιστρέψει True, ο χρήστης έχει αυθεντικοποιηθεί. 
+        
+        Το συγκεκριμένο endpoint θα πρέπει να επιστρέφει τη λίστα των φοιτητών οι οποίοι είναι 30 ετών.
+        Να περάσετε τα δεδομένα των φοιτητών σε μία λίστα που θα ονομάζεται students.
+        
+        Σε περίπτωση που δε βρεθεί κάποιος φοιτητής, να επιστρέφεται ανάλογο μήνυμα και όχι κενή λίστα.
+    """
+
+    uuid = request.headers.get('authorization')
+
+    if is_session_valid(uuid) :
+        
+        query = {"yearOfBirth": 1991}
+        iterable = students.find(query)
+
+        output = []
+        """
+        Δεν ονόμασα την λίστα students γιατί μου βγάζει αυτό το error :
+        UnboundLocalError: local variable 'students' referenced before assignment
+        """
+
+        for student in iterable:
+            student['_id'] = None 
+            output.append(student)
+
+        if output != []:
+            return Response(json.dumps(output), status=200, mimetype='application/json')
+        return Response('No student found thas is exactly 30 years old',status=500,mimetype='application/json')
     else:
         return Response("Wrong uuid.",status=401,mimetype='application/json')
 
