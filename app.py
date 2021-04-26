@@ -97,6 +97,40 @@ def login():
         return Response("Wrong username or password.",status=400,mimetype='application/json') 
 
 
+# ΕΡΩΤΗΜΑ 3: Επιστροφή φοιτητή βάσει email 
+@app.route('/getStudent', methods=['GET'])
+def get_student():
+
+    """
+        Στα headers του request ο χρήστης θα πρέπει να περνάει το uuid το οποίο έχει λάβει κατά την είσοδό του στο σύστημα. 
+            Π.Χ: uuid = request.headers.get['authorization']
+        Για τον έλεγχο του uuid να καλεστεί η συνάρτηση is_session_valid() (!!! Η ΣΥΝΑΡΤΗΣΗ is_session_valid() ΕΙΝΑΙ ΗΔΗ ΥΛΟΠΟΙΗΜΕΝΗ) με παράμετρο το uuid. 
+            * Αν η συνάρτηση επιστρέψει False ο χρήστης δεν έχει αυθεντικοποιηθεί. Σε αυτή τη περίπτωση να επιστρέφεται ανάλογο μήνυμα με response code 401. 
+            * Αν η συνάρτηση επιστρέψει True, ο χρήστης έχει αυθεντικοποιηθεί. 
+
+        Το συγκεκριμένο endpoint θα δέχεται σαν argument το email του φοιτητή και θα επιστρέφει τα δεδομένα του. 
+        Να περάσετε τα δεδομένα του φοιτητή σε ένα dictionary που θα ονομάζεται student.
+        
+        Σε περίπτωση που δε βρεθεί κάποιος φοιτητής, να επιστρέφεται ανάλογο μήνυμα.
+    """
+
+    uuid = request.headers.get('authorization')
+
+    if is_session_valid(uuid) :
+
+        email = request.args.get('email')
+
+        if email == None:
+            return Response("Bad request", status=500, mimetype='application/json')
+        student = students.find_one({"email":email})
+        if student !=None:
+            student = {'name':student["name"],'email':student["email"], 'yearOfBirth':student["yearOfBirth"], 'address':student["address"]}
+            return Response(json.dumps(student), status=200, mimetype='application/json')
+        return Response('No student found with that email',status=500,mimetype='application/json')
+    else:
+        return Response("Wrong uuid.",status=401,mimetype='application/json')
+
+
 # Εκτέλεση flask service σε debug mode, στην port 5000. 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
