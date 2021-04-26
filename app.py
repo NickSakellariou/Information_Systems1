@@ -261,6 +261,44 @@ def get_student_address():
         return Response("Wrong uuid.",status=401,mimetype='application/json')
 
 
+# ΕΡΩΤΗΜΑ 7: Διαγραφή φοιτητή βάσει email 
+@app.route('/deleteStudent', methods=['DELETE'])
+def delete_student():
+    """
+        Στα headers του request ο χρήστης θα πρέπει να περνάει και το uuid το οποίο έχει λάβει κατά την είσοδό του στο σύστημα. 
+            Π.Χ: uuid = request.headers.get['authorization']
+        Για τον έλεγχο του uuid να καλεστεί η συνάρτηση is_session_valid() (!!! Η ΣΥΝΑΡΤΗΣΗ is_session_valid() ΕΙΝΑΙ ΗΔΗ ΥΛΟΠΟΙΗΜΕΝΗ) με παράμετρο το uuid. 
+            * Αν η συνάρτηση επιστρέψει False ο χρήστης δεν έχει αυθεντικοποιηθεί. Σε αυτή τη περίπτωση να επιστρέφεται ανάλογο μήνυμα με response code 401. 
+            * Αν η συνάρτηση επιστρέψει True, ο χρήστης έχει αυθεντικοποιηθεί. 
+
+        Το συγκεκριμένο endpoint θα δέχεται σαν argument το email του φοιτητή. 
+        * Στη περίπτωση που υπάρχει φοιτητής με αυτό το email, να διαγράφεται από τη ΒΔ. Να επιστρέφεται μήνυμα επιτυχούς διαγραφής του φοιτητή.
+        * Διαφορετικά, να επιστρέφεται μήνυμα λάθους. 
+        
+        Και στις δύο περιπτώσεις, να δημιουργήσετε μία μεταβλήτη msg (String), η οποία θα περιλαμβάνει το αντίστοιχο μήνυμα.
+        Αν βρεθεί ο φοιτητής και διαγραφεί, στο μήνυμα θα πρέπει να δηλώνεται και το όνομά του (πχ: msg = "Morton Fitzgerald was deleted.").
+    """
+
+    uuid = request.headers.get('authorization')
+
+    if is_session_valid(uuid) :
+        
+        email = request.args.get('email')
+
+        if email == None:
+            return Response("Bad request", status=500, mimetype='application/json')
+        student = students.find_one({"email":email})
+        if student !=None:
+            msg = student['name'] + " was deleted."
+            students.delete_one({'email': email})
+            return Response(msg, status=200, mimetype='application/json')
+        else:
+            msg = "No student found with that email."
+            return Response(msg,status=500,mimetype='application/json')
+    else:
+        return Response("Wrong uuid.",status=401,mimetype='application/json')
+
+
 # Εκτέλεση flask service σε debug mode, στην port 5000. 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
