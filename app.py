@@ -64,6 +64,39 @@ def create_user():
         return Response("A user with the given username already exists",status=400,mimetype='application/json')
     
 
+# ΕΡΩΤΗΜΑ 2: Login στο σύστημα
+@app.route('/login', methods=['POST'])
+def login():
+    # Request JSON data
+    data = None 
+    try:
+        data = json.loads(request.data)
+    except Exception as e:
+        return Response("bad json content",status=500,mimetype='application/json')
+    if data == None:
+        return Response("bad request",status=500,mimetype='application/json')
+    if not "username" in data or not "password" in data:
+        return Response("Information incomplete",status=500,mimetype="application/json")
+
+    """
+        Να καλεστεί η συνάρτηση create_session() (!!! Η ΣΥΝΑΡΤΗΣΗ create_session() ΕΙΝΑΙ ΗΔΗ ΥΛΟΠΟΙΗΜΕΝΗ) 
+        με παράμετρο το username μόνο στη περίπτωση που τα στοιχεία που έχουν δοθεί είναι σωστά, δηλαδή:
+        * το data['username] είναι ίσο με το username που είναι στη ΒΔ (να γίνει αναζήτηση στο collection Users) ΚΑΙ
+        * το data['password'] είναι ίσο με το password του συγκεκριμένου χρήστη.
+        * Η συνάρτηση create_session() θα επιστρέφει ένα string το οποίο θα πρέπει να αναθέσετε σε μία μεταβλητή που θα ονομάζεται user_uuid.
+        
+        * Αν γίνει αυθεντικοποίηση του χρήστη, να επιστρέφεται μήνυμα με status code 200. 
+        * Διαφορετικά, να επιστρέφεται μήνυμα λάθους με status code 400.
+    """
+
+    if users.count_documents({"$and": [{"username":data["username"]}, {"password":data["password"]}]}) == 1 :
+        user_uuid = create_session(data['username'])
+        res = {"uuid": user_uuid, "username": data['username']}
+        return Response(json.dumps(res),status=200, mimetype='application/json')
+    else:
+        return Response("Wrong username or password.",status=400,mimetype='application/json') 
+
+
 # Εκτέλεση flask service σε debug mode, στην port 5000. 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
