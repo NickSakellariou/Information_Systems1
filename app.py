@@ -120,6 +120,11 @@ def get_student():
 
         email = request.args.get('email')
 
+        """
+        Επειδή στην εκφώνηση του ερωτήματος λέτε : Το συγκεκριμένο endpoint θα δέχεται σαν argument το email του φοιτητή.
+        Γι'αυτό έβγαλα την ανάθεση του email μέσα από το body του request, έτσι έχω κάνει και στα επόμενα ερωτήματα.
+        """
+
         if email == None:
             return Response("Bad request", status=500, mimetype='application/json')
         student = students.find_one({"email":email})
@@ -170,6 +175,8 @@ def get_students_thirty():
         """
         Δεν ονόμασα την λίστα students γιατί μου βγάζει αυτό το error :
         UnboundLocalError: local variable 'students' referenced before assignment
+        Επειδή υπάρχει ήδη η μεταβλητή students.
+        Έτσι έκανα και στα απόμενα ερωτήματα.
         """
 
         for student in iterable:
@@ -352,6 +359,59 @@ def add_courses():
     else:
         return Response("Wrong uuid.",status=401,mimetype='application/json')
 
+
+# ΕΡΩΤΗΜΑ 9: Επιστροφή περασμένων μαθημάτων φοιτητή βάσει email
+@app.route('/getPassedCourses', methods=['GET'])
+def get_courses():
+    """
+        Στα headers του request ο χρήστης θα πρέπει να περνάει και το uuid το οποίο έχει λάβει κατά την είσοδό του στο σύστημα. 
+            Π.Χ: uuid = request.headers.get['authorization']
+        Για τον έλεγχο του uuid να καλεστεί η συνάρτηση is_session_valid() (!!! Η ΣΥΝΑΡΤΗΣΗ is_session_valid() ΕΙΝΑΙ ΗΔΗ ΥΛΟΠΟΙΗΜΕΝΗ) με παράμετρο το uuid. 
+            * Αν η συνάρτηση επιστρέψει False ο χρήστης δεν έχει αυθεντικοποιηθεί. Σε αυτή τη περίπτωση να επιστρέφεται ανάλογο μήνυμα με response code 401. 
+            * Αν η συνάρτηση επιστρέψει True, ο χρήστης έχει αυθεντικοποιηθεί. 
+
+        Το συγκεκριμένο endpoint θα δέχεται σαν argument το email του φοιτητή.
+        * Στη περίπτωση που ο φοιτητής έχει βαθμολογία σε κάποια μαθήματα, θα πρέπει να επιστρέφεται το όνομά του (name) καθώς και τα μαθήματα που έχει πέρασει.
+        * Στη περίπτωη που είτε ο φοιτητής δεν περάσει κάποιο μάθημα, είτε δεν υπάρχει φοιτητής με αυτό το email στο σύστημα, να επιστρέφεται μήνυμα λάθους.
+        
+        Αν υπάρχει όντως ο φοιτητής με βαθμολογίες σε κάποια μαθήματα, να περάσετε τα δεδομένα του σε ένα dictionary που θα ονομάζεται student.
+        Το dictionary student θα πρέπει να είναι της μορφής: student = {"course name 1": X1, "course name 2": X2, ...}, όπου X1, X2, ... οι βαθμολογίες (integer) των μαθημάτων στα αντίστοιχα μαθήματα.
+    """
+
+    uuid = request.headers.get('authorization')
+
+    if is_session_valid(uuid) :
+        
+        email = request.args.get('email')
+
+        if email == None:
+            return Response("Bad request", status=500, mimetype='application/json')
+        student1 = students.find_one({"email":email})
+        if student1 !=None:
+
+            if students.count_documents({"$and": [{"email":email}, {"courses": {'$exists': True}}]}) == 1 :
+                i=0
+                passed_courses = 0
+                student = {'name':student1["name"]}
+                for x in student1["courses"]: 
+                    if list(student1["courses"][i].values())[0] > 4:
+                        student.update(student1["courses"][i])
+                        passed_courses = 1
+                    i+=1
+
+                if passed_courses == 1:
+                    return Response(json.dumps(student), status=200, mimetype='application/json')
+                else:
+                    msg = student1['name'] + " has not passed any courses yet"
+                    return Response(msg, status=200, mimetype='application/json')
+            else:
+                msg = "Did not find any available courses for " + student1['name']
+                return Response(msg, status=200, mimetype='application/json')
+        else:
+            msg = "No student found with that email."
+            return Response(msg,status=500,mimetype='application/json')
+    else:
+        return Response("Wrong uuid.",status=401,mimetype='application/json')
 
 # Εκτέλεση flask service σε debug mode, στην port 5000. 
 if __name__ == '__main__':
