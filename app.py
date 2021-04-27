@@ -56,7 +56,7 @@ def create_user():
     * Διαφορετικά, να επιστρέφεται μήνυμα λάθους, με status code 400.
     """
 
-    if users.find({"username":data["username"]}).count() == 0 :
+    if users.find({"username":data['username']}).count() == 0 :
         user = {"username": data['username'], "password": data['password']}
         users.insert_one(user)
         return Response(data['username']+" was added to the MongoDB",status=200,mimetype='application/json') 
@@ -89,7 +89,7 @@ def login():
         * Διαφορετικά, να επιστρέφεται μήνυμα λάθους με status code 400.
     """
 
-    if users.count_documents({"$and": [{"username":data["username"]}, {"password":data["password"]}]}) == 1 :
+    if users.count_documents({"$and": [{"username":data['username']}, {"password":data['password']}]}) == 1 :
         user_uuid = create_session(data['username'])
         res = {"uuid": user_uuid, "username": data['username']}
         return Response(json.dumps(res),status=200, mimetype='application/json')
@@ -100,6 +100,16 @@ def login():
 # ΕΡΩΤΗΜΑ 3: Επιστροφή φοιτητή βάσει email 
 @app.route('/getStudent', methods=['GET'])
 def get_student():
+    # Request JSON data
+    data = None 
+    try:
+        data = json.loads(request.data)
+    except Exception as e:
+        return Response("bad json content",status=500,mimetype='application/json')
+    if data == None:
+        return Response("bad request",status=500,mimetype='application/json')
+    if not "email" in data:
+        return Response("Information incomplete",status=500,mimetype="application/json")
 
     """
         Στα headers του request ο χρήστης θα πρέπει να περνάει το uuid το οποίο έχει λάβει κατά την είσοδό του στο σύστημα. 
@@ -117,29 +127,20 @@ def get_student():
     uuid = request.headers.get('authorization')
 
     if is_session_valid(uuid) :
-
-        email = request.args.get('email')
-
-        """
-        Επειδή στην εκφώνηση του ερωτήματος λέτε : Το συγκεκριμένο endpoint θα δέχεται σαν argument το email του φοιτητή.
-        Γι'αυτό έβγαλα την ανάθεση του email μέσα από το body του request, έτσι έχω κάνει και στα επόμενα ερωτήματα.
-        """
-
-        if email == None:
-            return Response("Bad request", status=500, mimetype='application/json')
-        student = students.find_one({"email":email})
+        
+        student = students.find_one({"email":data['email']})
         if student !=None:
 
-            if students.count_documents({"$and": [{"email":email}, {"address": {'$exists': False}}, {"gender": {'$exists': False}}]}) == 1 :
+            if students.count_documents({"$and": [{"email":data['email']}, {"address": {'$exists': False}}, {"gender": {'$exists': False}}]}) == 1 :
                 student = {'name':student["name"],'email':student["email"], 'yearOfBirth':student["yearOfBirth"]}
                 return Response(json.dumps(student), status=200, mimetype='application/json')
-            if students.count_documents({"$and": [{"email":email}, {"address": {'$exists': True}}, {"gender": {'$exists': False}}]}) == 1 :
+            if students.count_documents({"$and": [{"email":data['email']}, {"address": {'$exists': True}}, {"gender": {'$exists': False}}]}) == 1 :
                 student = {'name':student["name"],'email':student["email"], 'yearOfBirth':student["yearOfBirth"],'address':student["address"]}
                 return Response(json.dumps(student), status=200, mimetype='application/json')
-            if students.count_documents({"$and": [{"email":email}, {"address": {'$exists': False}}, {"gender": {'$exists': True}}]}) == 1 :
+            if students.count_documents({"$and": [{"email":data['email']}, {"address": {'$exists': False}}, {"gender": {'$exists': True}}]}) == 1 :
                 student = {'name':student["name"],'email':student["email"], 'yearOfBirth':student["yearOfBirth"],'gender':student["gender"]}
                 return Response(json.dumps(student), status=200, mimetype='application/json')
-            if students.count_documents({"$and": [{"email":email}, {"address": {'$exists': True}}, {"gender": {'$exists': True}}]}) == 1 :
+            if students.count_documents({"$and": [{"email":data['email']}, {"address": {'$exists': True}}, {"gender": {'$exists': True}}]}) == 1 :
                 student = {'name':student["name"],'email':student["email"], 'yearOfBirth':student["yearOfBirth"],'address':student["address"],'gender':student["gender"]}
                 return Response(json.dumps(student), status=200, mimetype='application/json')
 
@@ -231,6 +232,17 @@ def get_students_oldy():
 # ΕΡΩΤΗΜΑ 6: Επιστροφή φοιτητή που έχει δηλώσει κατοικία βάσει email 
 @app.route('/getStudentAddress', methods=['GET'])
 def get_student_address():
+    # Request JSON data
+    data = None 
+    try:
+        data = json.loads(request.data)
+    except Exception as e:
+        return Response("bad json content",status=500,mimetype='application/json')
+    if data == None:
+        return Response("bad request",status=500,mimetype='application/json')
+    if not "email" in data:
+        return Response("Information incomplete",status=500,mimetype="application/json")
+
     """
         Στα headers του request ο χρήστης θα πρέπει να περνάει και το uuid το οποίο έχει λάβει κατά την είσοδό του στο σύστημα. 
             Π.Χ: uuid = request.headers.get['authorization']
@@ -250,14 +262,10 @@ def get_student_address():
     uuid = request.headers.get('authorization')
 
     if is_session_valid(uuid) :
-        
-        email = request.args.get('email')
 
-        if email == None:
-            return Response("Bad request", status=500, mimetype='application/json')
-        student = students.find_one({"email":email})
+        student = students.find_one({"email":data['email']})
         if student !=None:
-            if students.count_documents({"$and": [{"email":email}, {"address": {'$exists': True}}]}) == 1 :
+            if students.count_documents({"$and": [{"email":data['email']}, {"address": {'$exists': True}}]}) == 1 :
                 student = {'name':student["name"],'street':student["address"][0]["street"],'postcode':student["address"][0]["postcode"]}
                 return Response(json.dumps(student), status=200, mimetype='application/json')
             else :
@@ -271,6 +279,17 @@ def get_student_address():
 # ΕΡΩΤΗΜΑ 7: Διαγραφή φοιτητή βάσει email 
 @app.route('/deleteStudent', methods=['DELETE'])
 def delete_student():
+    # Request JSON data
+    data = None 
+    try:
+        data = json.loads(request.data)
+    except Exception as e:
+        return Response("bad json content",status=500,mimetype='application/json')
+    if data == None:
+        return Response("bad request",status=500,mimetype='application/json')
+    if not "email" in data:
+        return Response("Information incomplete",status=500,mimetype="application/json")
+
     """
         Στα headers του request ο χρήστης θα πρέπει να περνάει και το uuid το οποίο έχει λάβει κατά την είσοδό του στο σύστημα. 
             Π.Χ: uuid = request.headers.get['authorization']
@@ -290,14 +309,10 @@ def delete_student():
 
     if is_session_valid(uuid) :
         
-        email = request.args.get('email')
-
-        if email == None:
-            return Response("Bad request", status=500, mimetype='application/json')
-        student = students.find_one({"email":email})
+        student = students.find_one({"email":data['email']})
         if student !=None:
             msg = student['name'] + " was deleted."
-            students.delete_one({'email': email})
+            students.delete_one({'email': data['email']})
             return Response(msg, status=200, mimetype='application/json')
         else:
             msg = "No student found with that email."
@@ -348,10 +363,10 @@ def add_courses():
 
     if is_session_valid(uuid) :
 
-        student = students.find_one({"email":data["email"]})
+        student = students.find_one({"email":data['email']})
         if student !=None:
-            msg = "Course was added to the student " + student['name']
-            students.update_one({'email': data["email"]}, {'$set': {"courses": data["courses"] }})
+            students.update_one({'email': data['email']}, {'$set': {"courses": data['courses'] }})
+            msg = "Courses were added to the student " + student['name']
             return Response(msg, status=200, mimetype='application/json')
         else:
             msg = "No student found with that email."
@@ -363,6 +378,17 @@ def add_courses():
 # ΕΡΩΤΗΜΑ 9: Επιστροφή περασμένων μαθημάτων φοιτητή βάσει email
 @app.route('/getPassedCourses', methods=['GET'])
 def get_courses():
+    # Request JSON data
+    data = None 
+    try:
+        data = json.loads(request.data)
+    except Exception as e:
+        return Response("bad json content",status=500,mimetype='application/json')
+    if data == None:
+        return Response("bad request",status=500,mimetype='application/json')
+    if not "email" in data:
+        return Response("Information incomplete",status=500,mimetype="application/json")
+
     """
         Στα headers του request ο χρήστης θα πρέπει να περνάει και το uuid το οποίο έχει λάβει κατά την είσοδό του στο σύστημα. 
             Π.Χ: uuid = request.headers.get['authorization']
@@ -381,16 +407,12 @@ def get_courses():
     uuid = request.headers.get('authorization')
 
     if is_session_valid(uuid) :
-        
-        email = request.args.get('email')
 
-        if email == None:
-            return Response("Bad request", status=500, mimetype='application/json')
-        student1 = students.find_one({"email":email})
+        student1 = students.find_one({"email":data['email']})
         if student1 !=None:
 
-            if students.count_documents({"$and": [{"email":email}, {"courses": {'$exists': True}}]}) == 1 :
-                i=0
+            if students.count_documents({"$and": [{"email":data['email']}, {"courses": {'$exists': True}}]}) == 1 :
+                i = 0
                 passed_courses = 0
                 student = {'name':student1["name"]}
                 for x in student1["courses"]: 
@@ -403,10 +425,10 @@ def get_courses():
                     return Response(json.dumps(student), status=200, mimetype='application/json')
                 else:
                     msg = student1['name'] + " has not passed any courses yet"
-                    return Response(msg, status=200, mimetype='application/json')
+                    return Response(msg, status=500, mimetype='application/json')
             else:
                 msg = "Did not find any available courses for " + student1['name']
-                return Response(msg, status=200, mimetype='application/json')
+                return Response(msg, status=500, mimetype='application/json')
         else:
             msg = "No student found with that email."
             return Response(msg,status=500,mimetype='application/json')
